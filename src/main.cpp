@@ -248,7 +248,7 @@ int main()
 					vector<double> next_y_vals;
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-					double dist_incrementer = 0.5;
+					double dist_incrementer = 0.2;
 					for (int i = 0; i < 50; i++)
 					{
 						double next_s = car_s + (i * 1) * dist_incrementer;
