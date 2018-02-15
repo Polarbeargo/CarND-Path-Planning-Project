@@ -8,6 +8,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
+#include "spline.h"
 
 using namespace std;
 
@@ -248,8 +249,8 @@ int main()
 					vector<double> next_y_vals;
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-					
-					// Tuning dist_incrementer prevent hit other cars but violate speed limit too slow
+
+					// Tuning dist_incrementer prevent hit other cars but violate speed limit
 					double dist_incrementer = 0.3;
 					for (int i = 0; i < 50; i++)
 					{
