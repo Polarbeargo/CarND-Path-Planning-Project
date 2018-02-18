@@ -150,6 +150,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 	int wp2 = (prev_wp + 1) % maps_x.size();
 
 	double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
+	
 	// the x,y,s along the segment
 	double seg_s = (s - maps_s[prev_wp]);
 
@@ -177,6 +178,7 @@ int main()
 
 	// Waypoint map to read from
 	string map_file_ = "../data/highway_map.csv";
+
 	// The max s value before wrapping around the track back to 0
 	double max_s = 6945.554;
 
@@ -203,13 +205,20 @@ int main()
 		map_waypoints_dy.push_back(d_y);
 	}
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																																																					 uWS::OpCode opCode) {
+	// Add start in lane 1 (0 is left, 1 is middle, 2 is right)
+	int lane = 1;
+
+	// Set reverence velocity to target vehicle MPH)
+	double rev_vel = 0.0;
+
+	h.onMessage([&rev_vel, &lane, &map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+																																																														uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
 		//auto sdata = string(data).substr(0, length);
 		//cout << sdata << endl;
+
 		if (length && length > 2 && data[0] == '4' && data[1] == '2')
 		{
 
@@ -241,25 +250,234 @@ int main()
 					double end_path_d = j[1]["end_path_d"];
 
 					// Sensor Fusion Data, a list of all other cars on the same side of the road.
-					auto sensor_fusion = j[1]["sensor_fusion"];
+					vector<vector<double>> sensor_fusion = j[1]["sensor_fusion"];
 
-					json msgJson;
+					int prev_size = previous_path_x.size();
 
+					// Find ref_v.
+					bool too_close = false;
+					bool car_left = false;
+					bool car_righ = false;
+					double speed_diff = 0.0;
+					const double MAX_VELOCITY = 49.5;
+					const double MAX_ACC = .224;
+
+					if (prev_size > 0)
+					{
+						car_s = end_path_s;
+					}
+
+					for (int i = 0; i < sensor_fusion.size(); i++)
+					{
+						float d = sensor_fusion[i][6];
+						int car_lane = -1;
+						
+						// Find car speed.
+						double vx = sensor_fusion[i][3];
+						double vy = sensor_fusion[i][4];
+						double check_speed = sqrt(vx * vx + vy * vy);
+						double check_car_s = sensor_fusion[i][5];
+
+						// Check vehicles position
+						if (d > 0 && d < 4)
+						{
+							car_lane = 0;
+						}
+						else if (d > 4 && d < 8)
+						{
+							car_lane = 1;
+						}
+						else if (d > 8 && d < 12)
+						{
+							car_lane = 2;
+						}
+						if (car_lane < 0)
+						{
+							continue;
+						}
+
+						// Using previous value can project s value out
+						check_car_s += ((double)prev_size * 0.02 * check_speed);
+
+						if (car_lane == lane)
+						{
+							// Car in our lane.
+							too_close |= check_car_s > car_s && check_car_s - car_s < 30;
+						}
+						else if (car_lane - lane == -1)
+						{
+							// Car left
+							car_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+						}
+						else if (car_lane - lane == 1)
+						{
+							// Car right
+							car_righ |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+						}
+					}
+
+					if (too_close)
+					{
+						if (!car_left && lane > 0)
+						{
+							// If there is no car left and there is a left lane change to left
+							lane--;
+						}
+						else if (!car_righ && lane != 2)
+						{
+							// If there is no car right and there is a right lane then change lane right.
+							lane++;
+						}
+						else
+						{
+							speed_diff -= MAX_ACC;
+						}
+					}
+					else
+					{
+						// If vehicle are not on the center lane.
+						if (lane != 1)
+						{
+							if ((lane == 0 && !car_righ) || (lane == 2 && !car_left))
+							{
+								lane = 1;
+							}
+						}
+						if (rev_vel < MAX_VELOCITY)
+						{
+							speed_diff += MAX_ACC;
+						}
+					}
+
+					vector<double> ptsx;
+					vector<double> ptsy;
+
+					double ref_x = car_x;
+					double ref_y = car_y;
+					double ref_yaw = deg2rad(car_yaw);
+
+					// Do I have have previous points
+					if (prev_size < 2)
+					{
+						// There are not too many...
+						double prev_car_x = car_x - cos(car_yaw);
+						double prev_car_y = car_y - sin(car_yaw);
+
+						ptsx.push_back(prev_car_x);
+						ptsx.push_back(car_x);
+
+						ptsy.push_back(prev_car_y);
+						ptsy.push_back(car_y);
+					}
+					else
+					{
+						// Use the last two points.
+						ref_x = previous_path_x[prev_size - 1];
+						ref_y = previous_path_y[prev_size - 1];
+
+						double ref_x_prev = previous_path_x[prev_size - 2];
+						double ref_y_prev = previous_path_y[prev_size - 2];
+						ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
+
+						ptsx.push_back(ref_x_prev);
+						ptsx.push_back(ref_x);
+
+						ptsy.push_back(ref_y_prev);
+						ptsy.push_back(ref_y);
+					}
+
+					// Add Fernet evenly evry 30m space point ahead of the starting reference.
+					vector<double> next_wp0 = getXY(car_s + 30, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+					vector<double> next_wp1 = getXY(car_s + 60, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+					vector<double> next_wp2 = getXY(car_s + 90, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+
+					ptsx.push_back(next_wp0[0]);
+					ptsx.push_back(next_wp1[0]);
+					ptsx.push_back(next_wp2[0]);
+
+					ptsy.push_back(next_wp0[1]);
+					ptsy.push_back(next_wp1[1]);
+					ptsy.push_back(next_wp2[1]);
+
+					for (int i = 0; i < ptsx.size(); i++)
+					{
+
+						// Shift car coordinates to 0 degree.
+						double shift_x = ptsx[i] - ref_x;
+						double shift_y = ptsy[i] - ref_y;
+
+						ptsx[i] = shift_x * cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw);
+						ptsy[i] = shift_x * sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw);
+					}
+
+					// Create the spline.
+					tk::spline s;
+
+					// Set (x,y) to the spline.
+					s.set_points(ptsx, ptsy);
+
+					// Define the actual output path points from previous path for the planner.
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
-					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-
-					// Tuning dist_incrementer prevent hit other cars but violate speed limit
-					double dist_incrementer = 0.3;
-					for (int i = 0; i < 50; i++)
+					for (int i = 0; i < prev_size; i++)
 					{
-						double next_s = car_s + (i * 1) * dist_incrementer;
-						double next_d = 6;
-						vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-						next_x_vals.push_back(xy[0]);
-						next_y_vals.push_back(xy[1]);
+						next_x_vals.push_back(previous_path_x[i]);
+						next_y_vals.push_back(previous_path_y[i]);
 					}
+
+					// Calculate how to break up Spline point so that we travel our desire velocity.
+					double target_x = 30.0;
+					double target_y = s(target_x);
+					double target_dist = sqrt(target_x * target_x + target_y * target_y);
+					double x_add_on = 0;
+
+					// Fill up the rest path planner after filling with previous point.
+					for (int i = 1; i < 50 - prev_size; i++)
+					{
+						rev_vel += speed_diff;
+						if (rev_vel > MAX_VELOCITY)
+						{
+							rev_vel = MAX_VELOCITY;
+						}
+						else if (rev_vel < MAX_ACC)
+						{
+							rev_vel = MAX_ACC;
+						}
+
+						double N = target_dist / (0.02 * rev_vel / 2.24);
+						double x_point = x_add_on + target_x / N;
+						double y_point = s(x_point);
+
+						x_add_on = x_point;
+
+						double x_ref = x_point;
+						double y_ref = y_point;
+
+						// Rotate back to normal after rotating it earlier
+						x_point = x_ref * cos(ref_yaw) - y_ref * sin(ref_yaw);
+						y_point = x_ref * sin(ref_yaw) + y_ref * cos(ref_yaw);
+
+						x_point += ref_x;
+						y_point += ref_y;
+
+						next_x_vals.push_back(x_point);
+						next_y_vals.push_back(y_point);
+					}
+
+					json msgJson;
+
+					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+					// Tuning dist_incrementer prevent hit other cars but violate speed limit
+					// double dist_incrementer = 0.3;
+					// for (int i = 0; i < 50; i++)
+					// {
+					// 	double next_s = car_s + (i * 1) * dist_incrementer;
+					// 	double next_d = 6;
+					// 	vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+					// 	next_x_vals.push_back(xy[0]);
+					// 	next_y_vals.push_back(xy[1]);
+					// }
 
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;
