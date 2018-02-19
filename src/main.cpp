@@ -270,7 +270,7 @@ int main()
 					for (int i = 0; i < sensor_fusion.size(); i++)
 					{
 						float d = sensor_fusion[i][6];
-						int car_lane = -1;
+						int vehicle_position = -1;
 
 						// Find car speed.
 						double vx = sensor_fusion[i][3];
@@ -278,20 +278,20 @@ int main()
 						double check_speed = sqrt(vx * vx + vy * vy);
 						double check_car_s = sensor_fusion[i][5];
 
-						// Check vehicles position
-						if (d > 0 && d < 4)
+						// Check vehicle position
+						if (d > 4 && d < 8)
 						{
-							car_lane = 0;
+							vehicle_position = 1;
 						}
-						else if (d > 4 && d < 8)
+						else if (d > 0 && d < 4)
 						{
-							car_lane = 1;
+							vehicle_position = 0;
 						}
 						else if (d > 8 && d < 12)
 						{
-							car_lane = 2;
+							vehicle_position = 2;
 						}
-						if (car_lane < 0)
+						if (vehicle_position < 0)
 						{
 							continue;
 						}
@@ -299,17 +299,17 @@ int main()
 						// Using previous value can project s value out
 						check_car_s += ((double)prev_size * 0.02 * check_speed);
 
-						if (car_lane == lane)
+						if (vehicle_position == lane)
 						{
 							// Car in our lane.
 							too_close |= check_car_s > car_s && check_car_s - car_s < 30;
 						}
-						else if (car_lane - lane == -1)
+						else if (vehicle_position - lane == -1)
 						{
 							// Car left
 							change_lane_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
 						}
-						else if (car_lane - lane == 1)
+						else if (vehicle_position - lane == 1)
 						{
 							// Car right
 							change_lane_right |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
