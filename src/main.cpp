@@ -261,6 +261,10 @@ int main()
 					double speed_diff = 0.0;
 					const double MAX_VELOCITY = 49.5;
 					const double MAX_ACCEL = .224;
+					const int CENTER_LANE_R_BOUNDARY = 4;
+					const int CENTER_LANE_L_BOUNDARY = 8;
+					const int RIGHT_LANE_R_BOUNDARY = 0;
+					const int LEFT_LANE_L_BOUNDARY = 12;
 
 					if (prev_size > 0)
 					{
@@ -279,19 +283,19 @@ int main()
 						double check_car_s = sensor_fusion[i][5];
 
 						// Set vehicle position lane as d value
-						if (d > 4 && d < 8)
+						if (d > CENTER_LANE_R_BOUNDARY && d < CENTER_LANE_L_BOUNDARY)
 						{
 							vehicle_position = 1;
 						}
-						else if (d > 0 && d < 4)
+						else if (d > RIGHT_LANE_R_BOUNDARY && d < CENTER_LANE_R_BOUNDARY)
 						{
-							vehicle_position = 0;
+							vehicle_position = RIGHT_LANE_R_BOUNDARY;
 						}
-						else if (d > 8 && d < 12)
+						else if (d > CENTER_LANE_L_BOUNDARY && d < LEFT_LANE_L_BOUNDARY)
 						{
 							vehicle_position = 2;
 						}
-						if (vehicle_position < 0)
+						if (vehicle_position < RIGHT_LANE_R_BOUNDARY)
 						{
 							continue;
 						}
