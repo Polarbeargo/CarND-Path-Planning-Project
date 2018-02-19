@@ -150,7 +150,7 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 	int wp2 = (prev_wp + 1) % maps_x.size();
 
 	double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
-	
+
 	// the x,y,s along the segment
 	double seg_s = (s - maps_s[prev_wp]);
 
@@ -256,11 +256,11 @@ int main()
 
 					// Find ref_v.
 					bool too_close = false;
-					bool car_left = false;
-					bool car_righ = false;
+					bool change_lane_left = false;
+					bool change_lane_right = false;
 					double speed_diff = 0.0;
 					const double MAX_VELOCITY = 49.5;
-					const double MAX_ACC = .224;
+					const double MAX_ACCEL = .224;
 
 					if (prev_size > 0)
 					{
@@ -271,7 +271,7 @@ int main()
 					{
 						float d = sensor_fusion[i][6];
 						int car_lane = -1;
-						
+
 						// Find car speed.
 						double vx = sensor_fusion[i][3];
 						double vy = sensor_fusion[i][4];
@@ -307,30 +307,30 @@ int main()
 						else if (car_lane - lane == -1)
 						{
 							// Car left
-							car_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+							change_lane_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
 						}
 						else if (car_lane - lane == 1)
 						{
 							// Car right
-							car_righ |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
+							change_lane_right |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
 						}
 					}
 
 					if (too_close)
 					{
-						if (!car_left && lane > 0)
-						{
-							// If there is no car left and there is a left lane change to left
-							lane--;
-						}
-						else if (!car_righ && lane != 2)
+						if (!change_lane_right && lane != 2)
 						{
 							// If there is no car right and there is a right lane then change lane right.
 							lane++;
 						}
+						else if (!change_lane_left && lane > 0)
+						{
+							// If there is no car left and there is a left lane change to left
+							lane--;
+						}
 						else
 						{
-							speed_diff -= MAX_ACC;
+							speed_diff -= MAX_ACCEL;
 						}
 					}
 					else
@@ -338,14 +338,14 @@ int main()
 						// If vehicle are not on the center lane.
 						if (lane != 1)
 						{
-							if ((lane == 0 && !car_righ) || (lane == 2 && !car_left))
+							if ((lane == 0 && !change_lane_right) || (lane == 2 && !change_lane_left))
 							{
 								lane = 1;
 							}
 						}
 						if (rev_vel < MAX_VELOCITY)
 						{
-							speed_diff += MAX_ACC;
+							speed_diff += MAX_ACCEL;
 						}
 					}
 
@@ -359,7 +359,6 @@ int main()
 					// Do I have have previous points
 					if (prev_size < 2)
 					{
-						// There are not too many...
 						double prev_car_x = car_x - cos(car_yaw);
 						double prev_car_y = car_y - sin(car_yaw);
 
@@ -440,9 +439,9 @@ int main()
 						{
 							rev_vel = MAX_VELOCITY;
 						}
-						else if (rev_vel < MAX_ACC)
+						else if (rev_vel < MAX_ACCEL)
 						{
-							rev_vel = MAX_ACC;
+							rev_vel = MAX_ACCEL;
 						}
 
 						double N = target_dist / (0.02 * rev_vel / 2.24);
