@@ -28,13 +28,13 @@ The highway's waypoints loop around so the frenet s value, distance along the ro
       
     1. Check vehicles position:
       
-      *
-      *
-      *
+        *
+        *
+        *
     2. If too close:  
     
-        * If there is no car right and there is a right lane then change lane right much safer in Taiwan.
-        * If there is no car left and there is a left lane change to left.
+        * If there is no vehicle on the right side of my autonomous vehicle and there is a right lane then change lane right much safer in Taiwan.
+        * If there is no vehicle on the left side of my autonomous vehicle and there is a left lane change to left.
         * else deaccelerate.  
         
     3. Not too close & If the vehicle is not in the center lane:  
