@@ -278,7 +278,7 @@ int main()
 						double check_speed = sqrt(vx * vx + vy * vy);
 						double check_car_s = sensor_fusion[i][5];
 
-						// Check vehicle position
+						// Set vehicle position lane as d value
 						if (d > 4 && d < 8)
 						{
 							vehicle_position = 1;
@@ -306,12 +306,12 @@ int main()
 						}
 						else if (vehicle_position - lane == -1)
 						{
-							// Car left
+							// Change to left lane
 							change_lane_left |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
 						}
 						else if (vehicle_position - lane == 1)
 						{
-							// Car right
+							// Change to right lane
 							change_lane_right |= car_s - 30 < check_car_s && car_s + 30 > check_car_s;
 						}
 					}
