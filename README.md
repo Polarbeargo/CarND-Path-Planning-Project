@@ -1,16 +1,47 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
+   [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/DO7pUoWJx_A/0.jpg)](https://www.youtube.com/watch?v=DO7pUoWJx_A&feature=youtu.be)
 ### Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
 ### Goals
 In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
 
+   The implmentations are components as following steps:
+     
+     1. Load up map values for waypoint's x,y,s and d normalized normal vectors.
+     2. Parsing Json data and vectorize sensor fusion data (a list of all other vehicle on the same side of the road).
+     3. Caculate predictions from sensor fusion data.
+     4. Define the actual output path points from previous path for the planner.
+     5. Calculate how to break up Spline point so that we can travel our desire velocity.
+    
+   
 #### The map of the highway is in data/highway_map.txt
-Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
+In Path-Planning project, I implemented a Finite State Machine to control the vehicle around the track in Udacity's simulator.The simulator sends car telemetry information to the waypoint via WebSocket and receives main vehicle's localization data, previous path data given to the planner, previous path's end s and d values and sensor fusion data, a list of all other cars on the same side of the road.
+
+  Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
 
 The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
+
+  The implmentations of Finite State Machine Flow as following steps:
+      
+      
+    1. Check vehicles position:
+      
+      *
+      *
+      *
+    2. If too close:  
+    
+        * If there is no car right and there is a right lane then change lane right much safer in Taiwan.
+        * If there is no car left and there is a left lane change to left.
+        * else deaccelerate.  
+        
+    3. Not too close & If vehicle are not on the center lane:  
+    
+        * If vehicle in the left lane and not the change_lane_right condition or in the right lane and not the change_lane_left condition back to the center lane.
+        * Accelerate velocity if velocity lower than max velocity.
+    
 
 ## Basic Build Instructions
 
