@@ -470,18 +470,6 @@ int main()
 
 					json msgJson;
 
-					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-					// Tuning dist_incrementer prevent hit other cars but violate speed limit
-					// double dist_incrementer = 0.3;
-					// for (int i = 0; i < 50; i++)
-					// {
-					// 	double next_s = car_s + (i * 1) * dist_incrementer;
-					// 	double next_d = 6;
-					// 	vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-					// 	next_x_vals.push_back(xy[0]);
-					// 	next_y_vals.push_back(xy[1]);
-					// }
-
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;
 
